@@ -1,0 +1,77 @@
+import mysql.connector
+from mysql.connector import errorcode
+import re
+
+def create_database(cursor):
+    try:
+        cursor.execute(
+            "CREATE DATABASE {} ".format(DB))
+    except mysql.connector.Error as err:
+        print("Failed creating database: {}".format(err))
+        exit(1)
+
+def email_status(email):
+    
+    email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    
+    # the re.match function to check if the email matches the pattern
+    if re.match(email_pattern, email):
+        return True
+    else:
+        print("The Email Address is Incorrect\nexample:\n\t(expression@string.string)")
+        return False
+
+
+cnx = mysql.connector.connect (user = "root" , password = "",
+                              host = '127.0.0.1',)
+
+cursor = cnx.cursor()
+
+DB = "Emails"  #Database name
+
+TABLES = {}
+TABLES['emailsdata'] = ('CREATE TABLE emailsdata\
+(email VARCHAR(50), password VARCHAR(50));')
+
+try:
+    cursor.execute("USE Emails")
+except mysql.connector.Error as err:
+    print("Database {} does not exists.".format(DB))
+    if err.errno == errorcode.ER_BAD_DB_ERROR:
+        create_database(cursor)
+        print("Database {} created successfully.".format(DB))
+        cnx.database = DB
+    else:
+        print(err)
+        exit(1)
+
+for table_name in TABLES:
+    table_description = TABLES[table_name]
+    try:
+        print("Creating table {}: ".format(table_name), end='')
+        cursor.execute(table_description)
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+            print("already exists.")
+        else:
+            print(err.msg)
+    else:
+        print("OK")
+
+emailaddress = input("Enter your Email Address : ")
+while email_status(emailaddress) == False :
+    emailaddress = input("Try again : ")
+else :
+    password = input ("password : ")    #should be hashed and double checked
+    add_data = ('INSERT INTO emailsdata VALUES (\'%s\',\'%s\')'%(emailaddress,password))
+    cursor.execute(add_data)    
+
+"""query = ('SELECT * FROM emailsdata') #reading data from database table
+cursor.execute(query)
+for (emailaddress,password) in cursor:
+    print(emailaddress,password)
+"""
+
+cnx.commit()
+cursor.close()
+cnx.close()
